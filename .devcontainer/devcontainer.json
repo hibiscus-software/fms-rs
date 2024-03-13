@@ -7,15 +7,22 @@
       "profile": "minimal"
     }
   },
-  "extensions": [
-    "rust-lang.rust-analyzer",
-    "serayuzgur.crates",
-    "tamasfe.even-better-toml",
-    "jdinhlife.gruvbox",
-    "jonathanharty.gruvbox-material-icon-theme"
-  ],
-  "settings": {
-    "workbench.colorTheme": "Gruvbox Dark Medium",
-    "workbench.iconTheme": "gruvbox-material-icon-theme"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml",
+        "jdinhlife.gruvbox",
+        "jonathanharty.gruvbox-material-icon-theme"
+      ],
+      "settings": {
+        "workbench.colorTheme": "Gruvbox Dark Medium",
+        "workbench.iconTheme": "gruvbox-material-icon-theme",
+        "git.enableSmartCommit": true,
+        "git.confirmSync": false,
+        "git.autofetch": true
+      }
+    }
   }
 }
