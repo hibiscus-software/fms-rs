@@ -11,9 +11,7 @@ pub struct PLC {
 impl PLC {
     #[must_use]
     pub const fn new(inputs: PLCInputs) -> Self {
-        return Self {
-            inputs
-        }
+        return Self { inputs };
     }
 
     /// Returns the state of the field e-stop button.
