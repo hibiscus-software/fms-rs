@@ -2,17 +2,30 @@
 // work is licensed under the terms of the MIT license which can be
 // found in the root directory of this project.
 
-use std::net::Ipv4Addr;
+use super::r#match::AllianceStation;
 
-/// Statuses that are sent from driver station to field management system
-pub struct DSStatus {
-    pub linked: bool,
-    pub missed_packet_count: u16,
-    pub last_packet_time: u16,
+/// Statuses that are sent from field management system to driver station
+#[derive(Debug)]
+pub struct FMSToDS {
+    pub estop: bool,
+    pub enabled: bool,
     pub packet_count: u8,
-    pub ip_address: Ipv4Addr,
-    pub missed_packet_offset: u16,
-    pub computer_battery_percent: u16,
-    pub computer_cpu_percent: u16,
-    pub last_log: &'static str,
+    pub mode: RobotState,
+    pub station: AllianceStation,
+    pub tournament_level: TournamentLevel,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum RobotState {
+    Auto,
+    Test,
+    Teleop,
+}
+
+#[derive(Debug)]
+pub enum TournamentLevel {
+    Test = 0,
+    Practice = 1,
+    Qualification = 2,
+    Playoff = 3,
 }

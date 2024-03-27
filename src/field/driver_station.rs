@@ -2,12 +2,10 @@
 // work is licensed under the terms of the MIT license which can be
 // found in the root directory of this project.
 
-use std::io::Error;
-
+use super::status::{FMSToDS, RobotState};
 use async_std::net::{TcpStream, UdpSocket};
-use byteorder::BigEndian;
-
-use super::status::DSStatus;
+use bytes::BufMut;
+use std::io::Error;
 
 const DS_TCP_LISTEN_PORT: u16 = 1750;
 const DS_UDP_SEND_PORT: u16 = 1121;
@@ -20,27 +18,24 @@ const DS_NAMES: [&'static str; 6] = ["Red 1", "Red 2", "Red 3", "Blue 1", "Blue 
 
 pub struct DriverStation {
     team_number: u16,
-    driver_station: u8,
     tcp_connection: TcpStream,
     udp_connection: UdpSocket,
-    ds_status: DSStatus,
+    fms_to_ds: FMSToDS,
 }
 
 impl DriverStation {
     /// Creates a new driver station object
-    pub const fn new(
+    pub fn new(
         team_number: u16,
-        driver_station: u8,
         tcp_connection: TcpStream,
         udp_connection: UdpSocket,
-        ds_status: DSStatus,
+        fms_to_ds: FMSToDS,
     ) -> Self {
         return Self {
             team_number,
-            driver_station,
             tcp_connection,
             udp_connection,
-            ds_status,
+            fms_to_ds,
         };
     }
 
@@ -49,13 +44,30 @@ impl DriverStation {
         let mut packet: Vec<u8> = vec![];
 
         // Packet number, stored big-endian in two bytes
-        packet.push((self.ds_status.packet_count >> 8) & 0xff);
-        packet.push(self.ds_status.packet_count & 0xff);
+        packet.put_u8((self.fms_to_ds.packet_count >> 8) & 0xff);
+        packet.put_u8(self.fms_to_ds.packet_count & 0xff);
 
-        // Protocol versio
-        packet.push(0x00);
+        // Protocol version
+        packet.put_u8(0x00);
 
         // Robot status
+        let mode: u8 = match self.fms_to_ds.mode {
+            RobotState::Auto => 2,
+            RobotState::Test => 1,
+            RobotState::Teleop => 0,
+        };
+        let control: u8 = ((self.fms_to_ds.estop as u8) << 7)
+            | ((self.fms_to_ds.enabled as u8) << 2)
+            | (mode & 0b11);
+        packet.put_u8(control);
+
+        // Unknown or unused
+        packet.put_u8(0x00);
+
+        // Driver station number
+        packet.put_u8(self.fms_to_ds.station.to_ds_number());
+
+        self.fms_to_ds.packet_count += 1;
 
         Ok(())
     }
