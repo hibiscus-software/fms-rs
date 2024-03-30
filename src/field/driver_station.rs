@@ -2,11 +2,11 @@
 // work is licensed under the terms of the MIT license which can be
 // found in the root directory of this project.
 
-use super::status::{FMSToDS, RobotState};
 use async_std::net::{TcpStream, UdpSocket};
 use bytes::BufMut;
-use chrono::{Datelike, Timelike};
 use std::io::Error;
+
+use super::status::{UdpControlPacket, Mode};
 
 const DS_TCP_LISTEN_PORT: u16 = 1750;
 const DS_UDP_SEND_PORT: u16 = 1121;
@@ -21,7 +21,7 @@ pub struct DriverStation {
     team_number: u16,
     tcp_connection: TcpStream,
     udp_connection: UdpSocket,
-    fms_to_ds: FMSToDS,
+    control_packet: UdpControlPacket,
 }
 
 impl DriverStation {
@@ -30,13 +30,13 @@ impl DriverStation {
         team_number: u16,
         tcp_connection: TcpStream,
         udp_connection: UdpSocket,
-        fms_to_ds: FMSToDS,
+        control_packet: UdpControlPacket,
     ) -> Self {
         return Self {
             team_number,
             tcp_connection,
             udp_connection,
-            fms_to_ds,
+            control_packet,
         };
     }
 
@@ -56,52 +56,52 @@ impl DriverStation {
         let mut packet: Vec<u8> = vec![];
 
         // Packet number, stored big-endian in two bytes
-        packet.put_u8((self.fms_to_ds.packet_count >> 8) & 0xff);
-        packet.put_u8(self.fms_to_ds.packet_count & 0xff);
+        packet.put_u8((self.control_packet.sequence_number >> 8) & 0xff);
+        packet.put_u8(self.control_packet.sequence_number & 0xff);
 
         // Protocol version
-        packet.put_u8(0x00);
+        packet.put_u8(self.control_packet.comm_version);
 
         // Robot status
-        let mode: u8 = match self.fms_to_ds.mode {
-            RobotState::Auto => 2,
-            RobotState::Test => 1,
-            RobotState::Teleop => 0,
+        let mode: u8 = match self.control_packet.control_byte.mode {
+            Mode::Auto => 2,
+            Mode::Test => 1,
+            Mode::Teleop => 0,
         };
-        let control: u8 = ((self.fms_to_ds.estop as u8) << 7)
-            | ((self.fms_to_ds.enabled as u8) << 2)
+        let control: u8 = ((self.control_packet.control_byte.estop as u8) << 7)
+            | ((self.control_packet.control_byte.enabled as u8) << 2)
             | (mode & 0x03);
         packet.put_u8(control);
 
         // Unknown or unused
-        packet.put_u8(0x00);
+        packet.put_u8(self.control_packet.request_byte);
 
         // Driver station number
-        packet.put_u8(self.fms_to_ds.station.to_ds_number());
+        packet.put_u8(self.control_packet.alliance_station.to_ds_number());
 
         // Match type
-        packet.put_u8(self.fms_to_ds.tournament_level as u8);
+        packet.put_u8(self.control_packet.tournament_level as u8);
 
         // Match number
-        packet.put_u16(self.fms_to_ds.match_number);
+        packet.put_u16(self.control_packet.match_number);
 
         // Match repeat number
-        packet.put_u8(self.fms_to_ds.repeat_number);
+        packet.put_u8(self.control_packet.play_number);
 
         // Current time and date
-        packet.put_u32(self.fms_to_ds.current_time.timestamp_subsec_micros());
-        packet.put_u8(self.fms_to_ds.current_time.second() as u8);
-        packet.put_u8(self.fms_to_ds.current_time.minute() as u8);
-        packet.put_u8(self.fms_to_ds.current_time.hour() as u8);
-        packet.put_u8(self.fms_to_ds.current_time.day() as u8);
-        packet.put_u8(self.fms_to_ds.current_time.month() as u8);
-        packet.put_u8((self.fms_to_ds.current_time.year() - 1900) as u8);
+        packet.put_u32(self.control_packet.date.microseconds);
+        packet.put_u8(self.control_packet.date.second);
+        packet.put_u8(self.control_packet.date.minute);
+        packet.put_u8(self.control_packet.date.hour);
+        packet.put_u8(self.control_packet.date.day);
+        packet.put_u8(self.control_packet.date.month);
+        packet.put_u8(self.control_packet.date.year);
 
         // Remaining seconds
-        packet.put_u16(self.fms_to_ds.remaining_seconds);
+        packet.put_u16(self.control_packet.remaining_time);
 
         // Increment packout count
-        self.fms_to_ds.packet_count += 1;
+        self.control_packet.sequence_number += 1;
 
         Ok(packet)
     }
