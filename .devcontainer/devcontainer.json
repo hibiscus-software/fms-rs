@@ -21,7 +21,15 @@
         "workbench.iconTheme": "gruvbox-material-icon-theme",
         "git.enableSmartCommit": true,
         "git.confirmSync": false,
-        "git.autofetch": true
+        "git.autofetch": true,
+        "editor.semanticTokenColorCustomizations": {
+          "enabled": true,
+          "rules": {
+            "*.mutable": {
+              "underline": false
+            }
+          }
+        }
       }
     }
   }

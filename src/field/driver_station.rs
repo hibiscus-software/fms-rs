@@ -40,8 +40,19 @@ impl DriverStation {
         };
     }
 
+    pub async fn listen_for_udp(&mut self) -> Result<(), Error> {
+        let listener = UdpSocket::bind(format!("0.0.0.0:{}", DS_UDP_RECEIVE_PORT)).await?;
+        listener
+            .connect(format!("0.0.0.0:{}", DS_UDP_RECEIVE_PORT))
+            .await?;
+
+        loop {
+            Ok(())
+        }
+    }
+
     /// Encodes the UDP control information into a packet
-    pub fn encode_control_packet(&mut self) -> Result<(), Error> {
+    pub fn encode_control_packet(&mut self) -> Result<Vec<u8>, Error> {
         let mut packet: Vec<u8> = vec![];
 
         // Packet number, stored big-endian in two bytes
@@ -91,6 +102,20 @@ impl DriverStation {
 
         // Increment packout count
         self.fms_to_ds.packet_count += 1;
+
+        Ok(packet)
+    }
+
+    /// Sends the next control packet to the driver station
+    pub async fn send_control_packet(&mut self) -> Result<(), Error> {
+        let packet = self
+            .encode_control_packet()
+            .expect("[ERROR] Unable to construct control packet.");
+
+        self.udp_connection
+            .send(&packet)
+            .await
+            .expect("[ERROR] Unable to send control packet.");
 
         Ok(())
     }
