@@ -5,6 +5,7 @@
 use super::status::{FMSToDS, RobotState};
 use async_std::net::{TcpStream, UdpSocket};
 use bytes::BufMut;
+use chrono::{Datelike, Timelike};
 use std::io::Error;
 
 const DS_TCP_LISTEN_PORT: u16 = 1750;
@@ -40,7 +41,7 @@ impl DriverStation {
     }
 
     /// Encodes the UDP control information into a packet
-    pub fn encode_control_packet(&mut self, driver_station: u8) -> Result<(), Error> {
+    pub fn encode_control_packet(&mut self) -> Result<(), Error> {
         let mut packet: Vec<u8> = vec![];
 
         // Packet number, stored big-endian in two bytes
@@ -58,7 +59,7 @@ impl DriverStation {
         };
         let control: u8 = ((self.fms_to_ds.estop as u8) << 7)
             | ((self.fms_to_ds.enabled as u8) << 2)
-            | (mode & 0b11);
+            | (mode & 0x03);
         packet.put_u8(control);
 
         // Unknown or unused
@@ -67,6 +68,28 @@ impl DriverStation {
         // Driver station number
         packet.put_u8(self.fms_to_ds.station.to_ds_number());
 
+        // Match type
+        packet.put_u8(self.fms_to_ds.tournament_level as u8);
+
+        // Match number
+        packet.put_u16(self.fms_to_ds.match_number);
+
+        // Match repeat number
+        packet.put_u8(self.fms_to_ds.repeat_number);
+
+        // Current time and date
+        packet.put_u32(self.fms_to_ds.current_time.timestamp_subsec_micros());
+        packet.put_u8(self.fms_to_ds.current_time.second() as u8);
+        packet.put_u8(self.fms_to_ds.current_time.minute() as u8);
+        packet.put_u8(self.fms_to_ds.current_time.hour() as u8);
+        packet.put_u8(self.fms_to_ds.current_time.day() as u8);
+        packet.put_u8(self.fms_to_ds.current_time.month() as u8);
+        packet.put_u8((self.fms_to_ds.current_time.year() - 1900) as u8);
+
+        // Remaining seconds
+        packet.put_u16(self.fms_to_ds.remaining_seconds);
+
+        // Increment packout count
         self.fms_to_ds.packet_count += 1;
 
         Ok(())

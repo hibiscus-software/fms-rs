@@ -2,13 +2,13 @@
 // work is licensed under the terms of the MIT license which can be
 // found in the root directory of this project.
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Alliance {
     Blue,
     Red,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct AllianceStation {
     pub alliance: Alliance,
     pub station: u8,

@@ -3,5 +3,5 @@
 // found in the root directory of this project.
 
 pub mod driver_station;
-pub mod r#match;
+pub mod alliance;
 pub mod status;
